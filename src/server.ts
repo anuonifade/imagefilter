@@ -40,10 +40,15 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
                 .send(`image_url is required`);
     }
 
-    const filteredimage: any = await filterImageFromURL(image_url);
+    // Remove all existing files in the temp folder
+    const tmpFiles: any = [];
+    const files: any = fs.readdirSync(__dirname + "/util/tmp/").forEach(file => {
+      tmpFiles.push(__dirname + "/util/tmp/" + file);
+    });
+    await deleteLocalFiles(tmpFiles);
 
-    const files: any = fs.readdirSync('/assets/photos/');
-    await deleteLocalFiles(files);
+    // Generate filtered image from image submitted
+    const filteredimage: any = await filterImageFromURL(image_url);
 
     return res.status(200)
               .sendFile(filteredimage);
