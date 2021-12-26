@@ -2,6 +2,20 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import fs from 'fs';
 import {filterImageFromURL, deleteLocalFiles} from './util/util';
+import { Request, Response } from 'express';
+import { NextFunction } from 'connect';
+
+export function requireAuth(req: Request, res: Response, next: NextFunction) {
+  if (!req.headers || !req.headers.authorization){
+      return res.status(401).send('No authorization headers.');
+  }
+
+  if (req.headers.authorization !== 'PzfYbTQEEDxeeSaYQIDlei0lQ46h70tL') {
+    return res.status(401).send('Invalid authorization header');
+  }
+
+  return next();
+}
 
 (async () => {
 
@@ -32,7 +46,7 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
 
   //! END @TODO1
 
-  app.get("/filteredimage", async (req, res) => {
+  app.get("/filteredimage", requireAuth, async (req, res) => {
     const { image_url } = req.query;
 
     if ( !image_url ) {
@@ -40,18 +54,13 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util';
                 .send(`image_url is required`);
     }
 
-    // Remove all existing files in the temp folder
-    const tmpFiles: any = [];
-    const files: any = fs.readdirSync(__dirname + "/util/tmp/").forEach(file => {
-      tmpFiles.push(__dirname + "/util/tmp/" + file);
-    });
-    await deleteLocalFiles(tmpFiles);
-
     // Generate filtered image from image submitted
     const filteredimage: any = await filterImageFromURL(image_url);
 
-    return res.status(200)
-              .sendFile(filteredimage);
+    res.status(200).sendFile(filteredimage);
+
+    // Remove all existing files in the temp folder
+    return res.on('finish', () => deleteLocalFiles([filteredimage]));
   })
   
   // Root Endpoint
